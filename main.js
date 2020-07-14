@@ -10,6 +10,7 @@ const log = (...args) =>
 
 const INT = num => num(x => x + 1)(0);
 const BOOL = bool => bool(true)(false);
+const FUNC = fn => fn;
 const __fst = a => b => a;
 const __snd = a => b => b;
 const PAIR = firstType => secondType => p =>
