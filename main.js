@@ -1,6 +1,5 @@
 const { watchFile, readFileSync } = require('fs');
 const { join } = require('path');
-const { type } = require('os');
 
 const sandboxFile = join(__dirname, process.argv[2] || 'sandbox');
 const log = (...args) => 
