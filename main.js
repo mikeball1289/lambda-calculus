@@ -1,4 +1,4 @@
-const { watchFile, readFileSync } = require('fs');
+const { watchFile, readFileSync, promises } = require('fs');
 const { join } = require('path');
 
 const sandboxFile = join(__dirname, process.argv[2] || 'sandbox');
@@ -90,10 +90,85 @@ function processSource(source) {
         source.replace(declarationRegex, 'const $1');
 }
 
+let scheduler = 0;
+let promise;
+let cleanup = [];
+
+function _bootstrap(generator, consumer, fn, prevVal, schedule) {
+    if (scheduler !== schedule) return;
+    return generator().then(v => {
+        if (scheduler !== schedule) return;
+        const result = fn(prevVal)(v);
+        const value = result(a => b => a);
+        consumer(value);
+        if (BOOL(result(a => b => b))) {
+            return _bootstrap(generator, consumer, fn, value, scheduler);
+        }
+    });
+}
+
+function bootstrap(generator, consumer, fn, init) {
+    promise = promise.then((s => () => _bootstrap(generator, consumer, fn, init, s))(scheduler));
+}
+
+const readline = require('readline');
+const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+});
+
+rl.on('line', l => {
+    const cb = linewaiters.shift();
+    if (cb) cb(l);
+});
+let linewaiters = [];
+
+function getLine() {
+    process.stdout.write('(IN)>> ');
+    return new Promise(resolve => {
+        const callback = l => {
+            cleanup = cleanup.filter(fn => fn !== cancel);
+            resolve(l);
+        }
+        const cancel = () => linewaiters = linewaiters.filter(fn => fn !== callback);
+
+        linewaiters.push(callback);
+        cleanup.push(cancel);
+    });
+}
+
+const STDIN = parser => async () => {
+    const line = await getLine();
+    return parser(line);
+}
+
+const STDOUT = transform => v => {
+    log(transform, v);
+}
+
+const USERINT = v => {
+    let n = Math.floor(Math.max(0, parseInt(v)));
+    if (isNaN(n) || !isFinite(n)) {
+        return f => x => x;
+    }
+    return f => x => {
+        let i = 0;
+        while (i < n) {
+            i ++;
+            x = f(x)
+        }
+        return x;
+    }
+}
+
 watchFile(sandboxFile, () => {
     'use strict';
     try {
         const today = new Date();
+        cleanup.forEach(fn => fn());
+        cleanup = [];
+        scheduler ++;
+        promise = Promise.resolve();
         console.clear();
         console.log(`\n-- SANDBOX (${today.toLocaleTimeString()}) --\n`);
         const source = readFileSync(sandboxFile, 'ascii');
