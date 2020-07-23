@@ -1,0 +1,154 @@
+ident = x => x
+sapply = f => f(f)
+nil = sapply(y => _ => y(y))
+
+zero = f => x => x
+one = f => x => f(x)
+two = f => x => f(f(x))
+
+incr = n => f => x => f(n(f)(x))
+
+three = incr(two)
+four = incr(three)
+five = incr(four)
+
+plus = m => n => f => x => n(f)(m(f)(x))
+
+six = plus(three)(three)
+seven = plus(five)(two)
+
+times = m => n => f => m(n(f))
+
+eight = times(four)(two)
+
+pow = m => n => n(m)
+
+nine = pow(three)(two)
+ten = incr(nine)
+
+tens = n => plus(times(ten)(n))
+fortytwo = tens(four)(two)
+
+T = a => b => a
+F = a => b => b
+not = bool => bool(F)(T)
+and = boola => boolb => boola(boolb)(boola)
+or = boola => boolb => boola(boola)(boolb)
+
+isZero = n => n(_ => F)(T)
+isEven = n => n(not)(T)
+isOdd = n => n(not)(F)
+
+pair = a => b => f => f(a)(b)
+left = a => b => a
+right = a => b => b
+
+zz = pair(zero)(zero)
+ss = p => pair(p(right))(incr(p(right)))
+
+decr = n => n(ss)(zz)(left)
+
+minus = m => n => n(decr)(m)
+
+leq = m => n => isZero(minus(m)(n))
+
+ifthenelse = pred => then => other => pred(then)(other)(ident)
+
+fact = sapply(y => n =>
+    ifthenelse(isZero(n)) (
+        _ => one
+    ) (
+        _ => times(n)(y(y)(decr(n)))
+    )
+)
+
+fibs = sapply(y => n =>
+    ifthenelse(leq(n)(one)) (
+        _ => n
+    ) (
+        _ => plus(y(y)(minus(n)(one)))(y(y)(minus(n)(two)))
+    )
+)
+
+betterFibs = sapply(y => prev => curr => n =>
+    ifthenelse(leq(n)(one)) (
+        _ => curr
+    ) (
+        _ => y(y)(curr)(plus(prev)(curr))(decr(n))
+    )
+)(zero)(one)
+
+list$empty = pair(T)(nil)
+list$isEmpty = l => l(left)
+list$push = l => x => pair(F)(pair(x)(l))
+list$head = l => ifthenelse(list$isEmpty(l)) (
+    _ => nil
+) (
+    _ => l(right)(left)
+)
+list$tail = l => ifthenelse(list$isEmpty(l)) (
+    _ => list$empty
+) (
+    _ => l(right)(right)
+)
+
+list$new = sapply(y => head => length =>
+    ifthenelse(isZero(length)) (
+        _ => head(list$empty)
+    ) (
+        _ => x => y(y)(l => head(list$push(l)(x)))(decr(length))
+    )
+)(ident)
+
+list$length = sapply(y => l =>
+    ifthenelse(list$isEmpty(l)) (
+        _ => zero
+    ) (
+        _ => incr(y(y)(list$tail(l)))
+    )
+)
+
+list$nth = sapply(y => l => n =>
+    ifthenelse(list$isEmpty(l)) (
+        _ => nil
+    ) (
+        _ => ifthenelse(isZero(n)) (
+            _ => list$head(l)
+        ) (
+            _ => y(y)(list$tail(l))(decr(n))
+        )
+    )
+)
+
+list$map = sapply(y => l => mapping =>
+    ifthenelse(list$isEmpty(l)) (
+        _ => list$empty
+    ) (
+        _ => list$push(y(y)(list$tail(l))(mapping))(mapping(list$head(l)))
+    )
+)
+
+list$foldl = sapply(y => l => fold => accumulator =>
+    ifthenelse(list$isEmpty(l)) (
+        _ => accumulator
+    ) (
+        _ => y(y)(list$tail(l))(fold)(fold(accumulator)(list$head(l)))
+    )
+)
+
+list$foldr = sapply(y => l => fold => accumulator =>
+    ifthenelse(list$isEmpty(l)) (
+        _ => accumulator
+    ) (
+        _ => fold(y(y)(list$tail(l))(fold)(accumulator))(list$head(l))
+    )
+)
+
+list$reduce = l => reduction => list$foldl(list$tail(l))(reduction)(list$head(l))
+
+list$reverse = l => list$foldr(l)(ident)(list$new(list$length(l)))
+
+myList = list$new(four)
+    (one)(two)(three)(four)
+
+log(LIST(INT), list$reverse(myList))
